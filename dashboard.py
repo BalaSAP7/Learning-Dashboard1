@@ -11,6 +11,16 @@ st.set_page_config(
 )
 
 @st.cache_data
+def load_base():
+    df = pd.read_excel("Testingg.xlsx", sheet_name="query (4)")
+    df.columns = df.columns.str.strip()
+    df["Published date"] = pd.to_datetime(df["Published date"], errors="coerce")
+    df["Created"] = pd.to_datetime(df["Created"], errors="coerce")
+    df["Course Expiry Date"] = pd.to_datetime(df["Course Expiry Date"], errors="coerce")
+    df["Duration"] = pd.to_numeric(df["Duration"], errors="coerce")
+    return df
+
+@st.cache_data
 def parse_uploaded(file_bytes, file_name):
     df = pd.read_excel(io.BytesIO(file_bytes))
     df.columns = df.columns.str.strip()
@@ -20,48 +30,29 @@ def parse_uploaded(file_bytes, file_name):
     df["Duration"] = pd.to_numeric(df["Duration"], errors="coerce")
     return df
 
+base_df = load_base()
+
 # ── Sidebar ──────────────────────────────────────────────────────────────────
 with st.sidebar:
-    st.markdown("### :material/folder_open: Upload Excel file(s)")
+    st.markdown("### :material/folder_open: Add more data")
     uploaded_files = st.file_uploader(
-        "Upload one or more Excel files (same format)",
+        "Upload additional Excel file(s) — same format",
         type=["xlsx", "xls"],
         accept_multiple_files=True,
         label_visibility="collapsed",
     )
 
-    all_dfs = []
-    if uploaded_files:
-        for uf in uploaded_files:
-            try:
-                all_dfs.append(parse_uploaded(uf.read(), uf.name))
-                st.success(f":material/check_circle: {uf.name}")
-            except Exception as e:
-                st.error(f":material/error: {uf.name} — {e}")
+    extra_dfs = []
+    for uf in uploaded_files:
+        try:
+            extra_dfs.append(parse_uploaded(uf.read(), uf.name))
+            st.success(f":material/check_circle: {uf.name}")
+        except Exception as e:
+            st.error(f":material/error: {uf.name} — {e}")
+
+    df = pd.concat([base_df] + extra_dfs, ignore_index=True) if extra_dfs else base_df
 
     st.divider()
-
-# ── No file uploaded yet — show landing screen ───────────────────────────────
-st.markdown("""
-<div style="background: linear-gradient(90deg, #1a73e8 0%, #0d47a1 100%);
-            padding: 24px 32px; border-radius: 12px; margin-bottom: 8px;">
-    <h1 style="color: white; margin: 0; font-size: 2rem; font-weight: 700; letter-spacing: 0.5px;">
-        📚 Learning Dashboard
-    </h1>
-    <p style="color: rgba(255,255,255,0.75); margin: 6px 0 0 0; font-size: 1rem;">
-        Upload your Excel file to explore learning content KPIs and insights
-    </p>
-</div>
-""", unsafe_allow_html=True)
-
-if not all_dfs:
-    st.info(":material/upload_file: Upload one or more Excel files using the sidebar to get started.")
-    st.stop()
-
-df = pd.concat(all_dfs, ignore_index=True)
-
-# ── Sidebar filters (only shown after upload) ─────────────────────────────────
-with st.sidebar:
     st.markdown("### :material/tune: Filters")
 
     statuses = sorted(df["Status"].dropna().unique().tolist())
@@ -79,7 +70,20 @@ filtered = df[
     & df["Content Owner"].isin(selected_owner)
 ]
 
-source_label = f"{len(uploaded_files)} file(s) loaded"
+# ── Title card ───────────────────────────────────────────────────────────────
+st.markdown("""
+<div style="background: linear-gradient(90deg, #1a73e8 0%, #0d47a1 100%);
+            padding: 24px 32px; border-radius: 12px; margin-bottom: 8px;">
+    <h1 style="color: white; margin: 0; font-size: 2rem; font-weight: 700; letter-spacing: 0.5px;">
+        📚 Learning Dashboard
+    </h1>
+    <p style="color: rgba(255,255,255,0.75); margin: 6px 0 0 0; font-size: 1rem;">
+        Upload your Excel file to explore learning content KPIs and insights
+    </p>
+</div>
+""", unsafe_allow_html=True)
+
+source_label = f"Base file + {len(extra_dfs)} additional file(s)" if extra_dfs else "Base file"
 st.caption(f"Showing {len(filtered):,} of {len(df):,} records — {source_label}")
 
 st.divider()
