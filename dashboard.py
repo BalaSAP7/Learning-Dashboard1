@@ -42,7 +42,17 @@ with st.sidebar:
     st.divider()
 
 # ── No file uploaded yet — show landing screen ───────────────────────────────
-st.title(":material/school: Learning Content Dashboard")
+st.markdown("""
+<div style="background: linear-gradient(90deg, #1a73e8 0%, #0d47a1 100%);
+            padding: 24px 32px; border-radius: 12px; margin-bottom: 8px;">
+    <h1 style="color: white; margin: 0; font-size: 2rem; font-weight: 700; letter-spacing: 0.5px;">
+        📚 Learning Dashboard
+    </h1>
+    <p style="color: rgba(255,255,255,0.75); margin: 6px 0 0 0; font-size: 1rem;">
+        Upload your Excel file to explore learning content KPIs and insights
+    </p>
+</div>
+""", unsafe_allow_html=True)
 
 if not all_dfs:
     st.info(":material/upload_file: Upload one or more Excel files using the sidebar to get started.")
